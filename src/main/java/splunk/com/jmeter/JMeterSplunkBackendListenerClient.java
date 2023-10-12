@@ -18,6 +18,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.samplers.SampleResult;
+import org.apache.jmeter.visualizers.Sample;
 import org.apache.jmeter.visualizers.backend.AbstractBackendListenerClient;
 import org.apache.jmeter.visualizers.backend.BackendListenerContext;
 import splunk.com.jmeter.config.splunk.SplunkConfig;
@@ -31,36 +32,38 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 /**
- *  splunk jmeter plugin.
- * 
- * @author Miguel Da Paixao
+ * splunk jmeter plugin.
+ *
  *
  */
 
-public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerClient{
-	
+public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerClient {
+
     SplunkConfig splunkConfig;
     private String runId;
     private long offset;
     private static final String TIMESTAMP = "timestamp";
-	private int activecount = 1;
-	private String splunkhost= "http-inputs-edj.splunkcloud.com";
-	private String splunkPort;
-	private String splunkHTTPScheme = "HTTPS";
-	private String splunkIndex= "test";
-	private String splunkToken="9a0b88e6-0142-4d9b-a8ee-b8cf740b86b0";
-	private String splunkSourceType="testing";
-	private String splunkProxy="http://zscaler-vse.edwardjones.com:443/";
+    private int activecount = 1;
+    private String splunkhost;
+    private String splunkPort;
+    private String splunkHTTPScheme = "HTTPS";
+    private String splunkIndex;
+    private String splunkToken;
+    private String splunkSourceType;
+    private String splunkProxy;
 
-	 @Override
-	public void setupTest(BackendListenerContext context) throws Exception {
-		
+
+
+    @Override
+    public void setupTest(BackendListenerContext context) throws Exception {
+
         splunkhost = context.getParameter("splunkHost");
-		splunkProxy = context.getParameter("splunkProxy");
+        splunkProxy = context.getParameter("splunkProxy");
         splunkPort = context.getParameter("splunkPort");
         splunkIndex = context.getParameter("splunkIndex");
         splunkToken = context.getParameter("splunkToken");
@@ -68,133 +71,134 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
         String dateTimeAppendFormat = context.getParameter("dateTimeAppendFormat");
         String normalizedTime = context.getParameter("normalizedTime");
 
-        if(dateTimeAppendFormat!=null && dateTimeAppendFormat.trim().equals("")) {
-        	dateTimeAppendFormat = null;
+        if (dateTimeAppendFormat != null && dateTimeAppendFormat.trim().equals("")) {
+            dateTimeAppendFormat = null;
         }
-		
-		if(normalizedTime != null && normalizedTime.trim().length() > 0 ){
-			SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSX");
-			Date d = sdf2.parse(normalizedTime);
-			long normalizedDate = d.getTime();
-			Date now = new Date();
-			offset = now.getTime() - normalizedDate;
-		}
-		runId = context.getParameter("runId");
-		super.setupTest(context);
-	}
-    
 
-@SuppressWarnings("deprecation")
-public void handleSampleResults(List<SampleResult> results, BackendListenerContext context) {
-		  
-        
-		for(SampleResult result : results) {
-			JsonObject builder = Json.createObjectBuilder()
-					    .add("ActiveCount", activecount++)
-			            .add("ResponseTime",result.getTime())
-				        .add("ElapsedTime", result.getTime())
-				        .add("ResponseCode", result.getResponseCode())
-				        .add("ResponseMessage", result.getResponseMessage())
-				        .add("ThreadName", result.getThreadName())
-				        .add("DataType", result.getDataType())
-				        .add("Success", String.valueOf(result.isSuccessful()))
-				        .add("GrpThreads", result.getGroupThreads())
-				        .add("AllThreads", result.getAllThreads())
-				        .add("URL", result.getUrlAsString())
-				        .add("Latency", result.getLatency())
-				        .add("ConnectTime", result.getConnectTime())
-				        .add("SampleCount", result.getSampleCount())
-				        .add("ErrorCount", result.getErrorCount())
-				        .add("Bytes", result.getBytes())
-				        .add("BodySize", result.getBodySize())
-				        .add("ContentType", result.getContentType())
-				        .add("IdleTime", result.getIdleTime())
-				        .add(TIMESTAMP, new Date(result.getTimeStamp()).toString())
-				        .add("NormalizedTimestamp", new Date(result.getTimeStamp() - offset).toString())
-				        .add("StartTime", new Date(result.getStartTime()).toString())
-				        .add("EndTime", new Date(result.getEndTime()).toString())
-				        .add("RunId", runId).build();
-				       
-			
-			 SSLContext sslContext = null;
-				try {
-					sslContext = new SSLContextBuilder()
-					        .loadTrustMaterial(null, (x509CertChain, authType) -> true)
-					        .build();
-				} catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+        if (normalizedTime != null && normalizedTime.trim().length() > 0) {
+            SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSX");
+            Date d = sdf2.parse(normalizedTime);
+            long normalizedDate = d.getTime();
+            Date now = new Date();
+            offset = now.getTime() - normalizedDate;
+        }
+        runId = context.getParameter("runId");
+        super.setupTest(context);
+    }
 
-		        CloseableHttpClient httpClient = HttpClientBuilder.create()
-		                .setSSLContext(sslContext)
-		                .setConnectionManager(
-		                        new PoolingHttpClientConnectionManager(
-		                                RegistryBuilder.<ConnectionSocketFactory>create()
-		                                        .register("http", PlainConnectionSocketFactory.INSTANCE)
-		                                        .register("https", new SSLConnectionSocketFactory(sslContext,
-		                                                NoopHostnameVerifier.INSTANCE))
-		                                        .build()
-		                        ))
-		                .build();
-		        
-		        
-		      //  HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + ":" + splunkPort + "/services/collector/event/1.0");
-			    HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + "/services/collector/event/1.0");
-				HttpHost proxy = new HttpHost(splunkProxy);
-			RequestConfig config = RequestConfig.custom().setProxy(proxy).build();
 
-		        httppost.addHeader("Authorization", " Splunk " + splunkToken);
+    @SuppressWarnings("deprecation")
+    public void handleSampleResults(List<SampleResult> results, BackendListenerContext context) {
 
-		        String eventStr = "{\"sourcetype\": \"" + splunkSourceType + "\", \"index\":\"" + splunkIndex + "\",\"event\":" + builder +  "}";
-		        
-		        
-		        try {
-					httppost.setEntity(new StringEntity(eventStr));
-					httppost.setConfig(config);
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				}
-				HttpResponse response = null;
-				try {
-					
-				response = httpClient.execute(httppost);
-				} catch (ClientProtocolException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			System.out.println("response: " + response);
-		        HttpEntity entity = response.getEntity();
-		        System.out.println("response: " + entity);
+        System.out.println("Check1: ");
+        for (SampleResult result : results) {
+            JsonObject builder = Json.createObjectBuilder()
+                    .add("ActiveCount", activecount++)
+                    .add("ResponseTime", result.getTime())
+                    .add("ElapsedTime", result.getTime())
+                    .add("Label", result.getSampleLabel())
+                    .add("ResponseCode", result.getResponseCode())
+                    .add("ResponseMessage", result.getResponseMessage())
+                    .add("ThreadName", result.getThreadName())
+                    .add("DataType", result.getDataType())
+                    .add("Success", String.valueOf(result.isSuccessful()))
+                    .add("GrpThreads", result.getGroupThreads())
+                    .add("AllThreads", result.getAllThreads())
+                    .add("URL", result.getUrlAsString())
+                    .add("Latency", result.getLatency())
+                    .add("ConnectTime", result.getConnectTime())
+                    .add("SampleCount", result.getSampleCount())
+                    .add("ErrorCount", result.getErrorCount())
+                    .add("Bytes", result.getBytes())
+                    .add("BodySize", result.getBodySize())
+                    .add("ContentType", result.getContentType())
+                    .add("IdleTime", result.getIdleTime())
+                    .add(TIMESTAMP, new Date(result.getTimeStamp()).toString())
+                    .add("StartTime", new Date(result.getStartTime()).toString())
+                    .add("EndTime", new Date(result.getEndTime()).toString())
+                    .add("RunId", runId).build();
 
-							
-		}
+            System.out.println("Results: "+results);
 
-	}
 
-	@Override
-	public Arguments getDefaultParameters() {
+            SSLContext sslContext = null;
+            try {
+                sslContext = new SSLContextBuilder()
+                        .loadTrustMaterial(null, (x509CertChain, authType) -> true)
+                        .build();
+            } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+
+            CloseableHttpClient httpClient = HttpClientBuilder.create()
+                    .setSSLContext(sslContext)
+                    .setConnectionManager(
+                            new PoolingHttpClientConnectionManager(
+                                    RegistryBuilder.<ConnectionSocketFactory>create()
+                                            .register("http", PlainConnectionSocketFactory.INSTANCE)
+                                            .register("https", new SSLConnectionSocketFactory(sslContext,
+                                                    NoopHostnameVerifier.INSTANCE))
+                                            .build()
+                            ))
+                    .build();
+
+
+            //  HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + ":" + splunkPort + "/services/collector/event/1.0");
+            HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + "/services/collector/event/1.0");
+
+            httppost.addHeader("Authorization", " Splunk " + splunkToken);
+
+            String eventStr = "{\"sourcetype\": \"" + splunkSourceType + "\", \"index\":\"" + splunkIndex + "\",\"event\":" + builder + "}";
+
+
+            try {
+                httppost.setEntity(new StringEntity(eventStr));
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+         //   HttpResponse response = null;
+            try {
+
+                HttpResponse response = httpClient.execute(httppost);
+
+                HttpEntity entity = response.getEntity();
+                System.out.println("response: " + entity);
+
+            } catch (ClientProtocolException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+
+        }
+
+    }
+
+    @Override
+    public Arguments getDefaultParameters() {
         Arguments arguments = new Arguments();
         arguments.addArgument("runId", "${__UUID()}");
         arguments.addArgument("dateTimeAppendFormat", "-yyyy-MM-DD");
-        arguments.addArgument("normalizedTime","2015-01-01 00:00:00.000-00:00");
-		arguments.addArgument(SplunkConfig.KEY_SPLUNK_HOST, "localhost");
-		arguments.addArgument(SplunkConfig.KEY_SPLUNK_PORT, SplunkConfig.DEFAULT_PORT);
-		arguments.addArgument(SplunkConfig.KEY_SPLUNK_TOKEN, "");
-		arguments.addArgument(SplunkConfig.KEY_SPLUNK_INDEX, "");
-		arguments.addArgument(SplunkConfig.KEY_SPLUNK_SOURCETYPE,"");
-		arguments.addArgument(SplunkConfig.KEY_SPLUNK_PROXY,"");
-		arguments.addArgument(SplunkConfig.KEY_RETENTION_POLICY, SplunkConfig.DEFAULT_RETENTION_POLICY);
-		return arguments;
+        arguments.addArgument("normalizedTime", "2015-01-01 00:00:00.000-00:00");
+        arguments.addArgument(SplunkConfig.KEY_SPLUNK_HOST, "localhost");
+        arguments.addArgument(SplunkConfig.KEY_SPLUNK_PORT, SplunkConfig.DEFAULT_PORT);
+        arguments.addArgument(SplunkConfig.KEY_SPLUNK_TOKEN, "");
+        arguments.addArgument(SplunkConfig.KEY_SPLUNK_INDEX, "");
+        arguments.addArgument(SplunkConfig.KEY_SPLUNK_SOURCETYPE, "");
+        arguments.addArgument(SplunkConfig.KEY_SPLUNK_PROXY, "");
+        arguments.addArgument(SplunkConfig.KEY_RETENTION_POLICY, SplunkConfig.DEFAULT_RETENTION_POLICY);
+        return arguments;
     }
-    
+
     @Override
-	public void teardownTest(BackendListenerContext context) throws Exception {	
-		super.teardownTest(context);
-	}
-    
-  
+    public void teardownTest(BackendListenerContext context) throws Exception {
+        super.teardownTest(context);
+    }
+
+
 }
