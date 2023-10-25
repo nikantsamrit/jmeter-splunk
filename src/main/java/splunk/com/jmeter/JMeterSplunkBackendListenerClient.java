@@ -90,7 +90,7 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
     @SuppressWarnings("deprecation")
     public void handleSampleResults(List<SampleResult> results, BackendListenerContext context) {
 
-        System.out.println("Check1: ");
+
         for (SampleResult result : results) {
             JsonObject builder = Json.createObjectBuilder()
                     .add("ActiveCount", activecount++)
@@ -118,7 +118,6 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
                     .add("EndTime", new Date(result.getEndTime()).toString())
                     .add("RunId", runId).build();
 
-            System.out.println("Results: "+results);
 
 
             SSLContext sslContext = null;
@@ -162,8 +161,8 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
 
                 HttpResponse response = httpClient.execute(httppost);
 
-                HttpEntity entity = response.getEntity();
-                System.out.println("response: " + entity);
+              //  HttpEntity entity = response.getEntity();
+               // System.out.println("response: " + entity);
 
             } catch (ClientProtocolException e) {
                 // TODO Auto-generated catch block
