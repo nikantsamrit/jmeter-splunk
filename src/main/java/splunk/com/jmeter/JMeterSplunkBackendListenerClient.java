@@ -99,6 +99,7 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
                     .add("Label", result.getSampleLabel())
                     .add("ResponseCode", result.getResponseCode())
                     .add("ResponseMessage", result.getResponseMessage())
+                    .add("FailureMessage", result.getFirstAssertionFailureMessage())
                     .add("ThreadName", result.getThreadName())
                     .add("DataType", result.getDataType())
                     .add("Success", String.valueOf(result.isSuccessful()))
