@@ -58,8 +58,6 @@ public class SplunkConfig {
 	 */
     public static final String KEY_HTTP_SCHEME = "splunkHTTPScheme";
 
-	public static final String KEY_SPLUNK_PROXY= "splunkProxy";
-    
     
 private String splunkHost;
 private String splunkIndex;
@@ -68,7 +66,6 @@ private String splunkToken;
 private String splunkPort;
 private String retentionPolicy;
 private String splunkHTTPScheme;
-private String splunkProxy;
 
 
 public SplunkConfig(BackendListenerContext context){
@@ -99,11 +96,6 @@ public SplunkConfig(BackendListenerContext context){
     }
     setSplunkSourceType(splunkSourceType);
 
-	String proxy = context.getParameter(KEY_SPLUNK_PROXY);
-	if (StringUtils.isEmpty(proxy)) {
-		//throw new IllegalArgumentException(KEY_PROXY + "must not be empty!");
-	}
-	setSplunkSourceType(proxy);
 
     String RetentionPolicy = context.getParameter(KEY_RETENTION_POLICY, DEFAULT_RETENTION_POLICY);
 		if (StringUtils.isEmpty(retentionPolicy)) {
@@ -195,12 +187,7 @@ public SplunkConfig(BackendListenerContext context){
 		this.splunkPort = splunkPort;
     }
 
-	public String getSplunkProxy() {
-		return splunkProxy;
-	}
-	public void setproxy(String splunkProxy) {
-		this.splunkProxy = splunkProxy;
-	}
+
     /**
 	 * @return the RetentionPolicy
 	 */

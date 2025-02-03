@@ -7,6 +7,7 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -15,6 +16,7 @@ import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.samplers.SampleResult;
@@ -55,7 +57,6 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
     private String splunkIndex;
     private String splunkToken;
     private String splunkSourceType;
-    private String splunkProxy;
 
 
 
@@ -63,7 +64,6 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
     public void setupTest(BackendListenerContext context) throws Exception {
 
         splunkhost = context.getParameter("splunkHost");
-        splunkProxy = context.getParameter("splunkProxy");
         splunkPort = context.getParameter("splunkPort");
         splunkIndex = context.getParameter("splunkIndex");
         splunkToken = context.getParameter("splunkToken");
@@ -99,7 +99,6 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
                     .add("Label", result.getSampleLabel())
                     .add("ResponseCode", result.getResponseCode())
                     .add("ResponseMessage", result.getResponseMessage())
-                    .add("FailureMessage", result.getFirstAssertionFailureMessage())
                     .add("ThreadName", result.getThreadName())
                     .add("DataType", result.getDataType())
                     .add("Success", String.valueOf(result.isSuccessful()))
@@ -131,6 +130,7 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
                 e1.printStackTrace();
             }
 
+/*
             CloseableHttpClient httpClient = HttpClientBuilder.create()
                     .setSSLContext(sslContext)
                     .setConnectionManager(
@@ -142,36 +142,52 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
                                             .build()
                             ))
                     .build();
+*/
+            String proxyHost  = "zscaler-vse.edwardjones.com";
+            int proxyPort = 443;
+            HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+
+            try (CloseableHttpClient httpClient = HttpClients.custom()
+                    .setProxy(proxy).
+                    setSSLContext(sslContext)
+                    .setConnectionManager(new PoolingHttpClientConnectionManager(
+                            RegistryBuilder.<ConnectionSocketFactory>create()
+                                    .register("http", PlainConnectionSocketFactory.INSTANCE)
+                                    .register("https", new SSLConnectionSocketFactory(sslContext,
+                                            NoopHostnameVerifier.INSTANCE))
+                                    .build()
+                    ))
+                    .build()) {
+
+                HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + "/services/collector/event/1.0");
+                httppost.addHeader("Authorization", " Splunk " + splunkToken);
+
+                String eventStr = "{\"sourcetype\": \"" + splunkSourceType + "\", \"index\":\"" + splunkIndex + "\",\"event\":" + builder + "}";
 
 
-            //  HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + ":" + splunkPort + "/services/collector/event/1.0");
-            HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + "/services/collector/event/1.0");
+                try {
+                    httppost.setEntity(new StringEntity(eventStr));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+                //   HttpResponse response = null;
+                try {
 
-            httppost.addHeader("Authorization", " Splunk " + splunkToken);
+                    HttpResponse response = httpClient.execute(httppost);
 
-            String eventStr = "{\"sourcetype\": \"" + splunkSourceType + "\", \"index\":\"" + splunkIndex + "\",\"event\":" + builder + "}";
+                    //  HttpEntity entity = response.getEntity();
+                    // System.out.println("response: " + entity);
 
+                } catch (ClientProtocolException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
 
-            try {
-                httppost.setEntity(new StringEntity(eventStr));
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-         //   HttpResponse response = null;
-            try {
-
-                HttpResponse response = httpClient.execute(httppost);
-
-              //  HttpEntity entity = response.getEntity();
-               // System.out.println("response: " + entity);
-
-            } catch (ClientProtocolException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
 
 
@@ -190,7 +206,6 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
         arguments.addArgument(SplunkConfig.KEY_SPLUNK_TOKEN, "");
         arguments.addArgument(SplunkConfig.KEY_SPLUNK_INDEX, "");
         arguments.addArgument(SplunkConfig.KEY_SPLUNK_SOURCETYPE, "");
-        arguments.addArgument(SplunkConfig.KEY_SPLUNK_PROXY, "");
         arguments.addArgument(SplunkConfig.KEY_RETENTION_POLICY, SplunkConfig.DEFAULT_RETENTION_POLICY);
         return arguments;
     }
