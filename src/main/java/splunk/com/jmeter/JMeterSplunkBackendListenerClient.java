@@ -1,13 +1,9 @@
 package splunk.com.jmeter;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -15,12 +11,10 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.samplers.SampleResult;
-import org.apache.jmeter.visualizers.Sample;
 import org.apache.jmeter.visualizers.backend.AbstractBackendListenerClient;
 import org.apache.jmeter.visualizers.backend.BackendListenerContext;
 import splunk.com.jmeter.config.splunk.SplunkConfig;
@@ -29,12 +23,10 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -158,39 +150,16 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
                                     .build()
                     ))
                     .build()) {
-
                 HttpPost httppost = new HttpPost(splunkHTTPScheme + "://" + splunkhost + "/services/collector/event/1.0");
                 httppost.addHeader("Authorization", " Splunk " + splunkToken);
-
                 String eventStr = "{\"sourcetype\": \"" + splunkSourceType + "\", \"index\":\"" + splunkIndex + "\",\"event\":" + builder + "}";
 
-
-                try {
                     httppost.setEntity(new StringEntity(eventStr));
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-                //   HttpResponse response = null;
-                try {
-
                     HttpResponse response = httpClient.execute(httppost);
 
-                    //  HttpEntity entity = response.getEntity();
-                    // System.out.println("response: " + entity);
-
-                } catch (ClientProtocolException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
-
         }
 
     }
@@ -214,6 +183,4 @@ public class JMeterSplunkBackendListenerClient extends AbstractBackendListenerCl
     public void teardownTest(BackendListenerContext context) throws Exception {
         super.teardownTest(context);
     }
-
-
 }
